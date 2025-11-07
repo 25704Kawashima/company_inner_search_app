@@ -94,7 +94,7 @@ SQLAlchemy==2.0.36
 starlette==0.20.4
 streamlit==1.40.2
 SudachiPy==0.6.10
-SudachiDict-full==20251022
+# SudachiDict-full==20251022
 sympy==1.13.3
 tenacity==8.5.0
 tiktoken==0.8.0
