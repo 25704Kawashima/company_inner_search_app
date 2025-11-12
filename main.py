@@ -28,7 +28,6 @@ import constants as ct
 st.set_page_config(
     page_title=ct.APP_NAME
 )
-load_dotenv()
 
 # ログ出力を行うためのロガーの設定
 logger = logging.getLogger(ct.LOGGER_NAME)
