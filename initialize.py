@@ -12,9 +12,9 @@ from uuid import uuid4
 import sys
 import unicodedata
 from dotenv import load_dotenv
-from langchain.schema import Document
+from langchain_core.documents.base import Document as LangchainDocument  # エイリアスを付ける
 import streamlit as st
-from docx import Document
+from docx import Document as DocxDocument  # エイリアスを付ける
 from langchain_community.document_loaders import WebBaseLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
@@ -224,7 +224,7 @@ def file_load(path, docs_all):
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()  # ファイル全体を文字列として読み込む
             # ドキュメント形式に変換して追加
-            docs_all.append(Document(page_content=content, metadata={"source": path}))
+            docs_all.append(LangchainDocument(page_content=content, metadata={"source": path}))
         else:
             # 他の形式は通常通り読み込む
             loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
