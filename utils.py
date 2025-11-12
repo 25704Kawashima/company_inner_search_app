@@ -13,6 +13,7 @@ from langchain.schema import HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 import constants as ct
 
 
@@ -70,7 +71,12 @@ def get_llm_response(chat_message):
         LLMからの回答
     """
     # LLMのオブジェクトを用意
-    llm = ChatOpenAI(model_name=ct.MODEL, temperature=ct.TEMPERATURE)
+    llm = ChatOpenAI(
+        model_name=ct.MODEL,
+        temperature=ct.TEMPERATURE,
+        # streaming=True,
+        # callbacks=[StreamingStdOutCallbackHandler()]
+    )
 
     # 会話履歴なしでもLLMに理解してもらえる、独立した入力テキストを取得するためのプロンプトテンプレートを作成
     question_generator_template = ct.SYSTEM_PROMPT_CREATE_INDEPENDENT_TEXT
