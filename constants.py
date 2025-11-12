@@ -50,7 +50,7 @@ RAG_TOP_FOLDER_PATH = "./data"
 SUPPORTED_EXTENSIONS = {
     ".pdf": PyMuPDFLoader,
     ".docx": Docx2txtLoader,
-    ".csv": lambda path: CSVLoader(path, encoding="utf-8"),
+    ".csv": lambda path: None,  # CSVは特別処理するためダミーを設定
     ".txt": TextLoader
 }
 WEB_URL_LOAD_TARGETS = [

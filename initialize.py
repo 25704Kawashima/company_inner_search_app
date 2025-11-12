@@ -112,6 +112,7 @@ def initialize_retriever():
     
     # RAGの参照先となるデータソースの読み込み
     docs_all = load_data_sources()
+    print(docs_all)  # デバッグ用に内容を確認
 
     # OSがWindowsの場合、Unicode正規化と、cp932（Windows用の文字コード）で表現できない文字を除去
     for doc in docs_all:
@@ -173,6 +174,9 @@ def load_data_sources():
         web_docs_all.extend(web_docs)
     # 通常読み込みのデータソースにWebページのデータを追加
     docs_all.extend(web_docs_all)
+
+    # 空のコンテンツを持つドキュメントを除外
+    docs_all = [doc for doc in docs_all if doc.page_content.strip()]
 
     return docs_all
 
