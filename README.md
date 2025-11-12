@@ -2,3 +2,5 @@
 ## In the virtual environment setup stage, the following packages not be installed.
 - SudachiDict-full==20251022
 The one can be installed in "動産-１１３".
+
+## ローカルで立ち上げる際は「.env」でOPENAI_API_KEYを設定してください。

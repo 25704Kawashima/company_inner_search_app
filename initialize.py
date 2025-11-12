@@ -12,6 +12,7 @@ from uuid import uuid4
 import sys
 import unicodedata
 from dotenv import load_dotenv
+from langchain.schema import Document
 import streamlit as st
 from docx import Document
 from langchain_community.document_loaders import WebBaseLoader
@@ -214,10 +215,17 @@ def file_load(path, docs_all):
 
     # 想定していたファイル形式の場合のみ読み込む
     if file_extension in ct.SUPPORTED_EXTENSIONS:
-        # ファイルの拡張子に合ったdata loaderを使ってデータ読み込み
-        loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
-        docs = loader.load()
-        docs_all.extend(docs)
+        # CSVファイルの場合、全体を1つのドキュメントとして読み込む
+        if file_extension == ".csv":
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()  # ファイル全体を文字列として読み込む
+            # ドキュメント形式に変換して追加
+            docs_all.append(Document(page_content=content, metadata={"source": path}))
+        else:
+            # 他の形式は通常通り読み込む
+            loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
+            docs = loader.load()
+            docs_all.extend(docs)
 
 
 def adjust_string(s):
