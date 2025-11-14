@@ -12,7 +12,7 @@ from uuid import uuid4
 import sys
 import unicodedata
 from dotenv import load_dotenv
-from langchain_core.documents.base import Document as LangchainDocument  # エイリアスを付ける
+from langchain_core.documents import Document as LangchainDocument  # エイリアスを付ける
 import streamlit as st
 from docx import Document as DocxDocument  # エイリアスを付ける
 from langchain_community.document_loaders import WebBaseLoader
@@ -111,11 +111,14 @@ def initialize_retriever():
         return
     
     # RAGの参照先となるデータソースの読み込み
-    docs_all = load_data_sources()
-    print(docs_all)  # デバッグ用に内容を確認
+    docs_all , integrated_docs_all = load_data_sources()
 
     # OSがWindowsの場合、Unicode正規化と、cp932（Windows用の文字コード）で表現できない文字を除去
     for doc in docs_all:
+        doc.page_content = adjust_string(doc.page_content)
+        for key in doc.metadata:
+            doc.metadata[key] = adjust_string(doc.metadata[key])
+    for doc in integrated_docs_all:
         doc.page_content = adjust_string(doc.page_content)
         for key in doc.metadata:
             doc.metadata[key] = adjust_string(doc.metadata[key])
@@ -132,6 +135,9 @@ def initialize_retriever():
 
     # チャンク分割を実施
     splitted_docs = text_splitter.split_documents(docs_all)
+
+    # チャンク分割後のデータソースに、CSVファイルの各行データを1つのドキュメントに統合したデータを追加
+    splitted_docs.extend(integrated_docs_all)
 
     # ベクターストアの作成
     db = Chroma.from_documents(splitted_docs, embedding=embeddings)
@@ -156,12 +162,15 @@ def load_data_sources():
     RAGの参照先となるデータソースの読み込み
 
     Returns:
-        読み込んだ通常データソース
+        docs_all:読み込んだ通常データソース
+        integrated_docs_all: CSVファイル整形後のデータソース
     """
     # データソースを格納する用のリスト
     docs_all = []
+    # CSVファイル整形後のデータソースを格納する用のリスト
+    integrated_docs_all = []
     # ファイル読み込みの実行（渡した各リストにデータが格納される）
-    recursive_file_check(ct.RAG_TOP_FOLDER_PATH, docs_all)
+    recursive_file_check(ct.RAG_TOP_FOLDER_PATH, docs_all, integrated_docs_all)
 
     web_docs_all = []
     # ファイルとは別に、指定のWebページ内のデータも読み込み
@@ -178,10 +187,10 @@ def load_data_sources():
     # 空のコンテンツを持つドキュメントを除外
     docs_all = [doc for doc in docs_all if doc.page_content.strip()]
 
-    return docs_all
+    return docs_all, integrated_docs_all
 
 
-def recursive_file_check(path, docs_all):
+def recursive_file_check(path, docs_all, integrated_docs_all):
     """
     RAGの参照先となるデータソースの読み込み
 
@@ -198,13 +207,13 @@ def recursive_file_check(path, docs_all):
             # ファイル/フォルダ名だけでなく、フルパスを取得
             full_path = os.path.join(path, file)
             # フルパスを渡し、再帰的にファイル読み込みの関数を実行
-            recursive_file_check(full_path, docs_all)
+            recursive_file_check(full_path, docs_all, integrated_docs_all)
     else:
         # パスがファイルの場合、ファイル読み込み
-        file_load(path, docs_all)
+        file_load(path, docs_all, integrated_docs_all)
 
 
-def file_load(path, docs_all):
+def file_load(path, docs_all, integrated_docs_all):
     """
     ファイル内のデータ読み込み
 
@@ -219,18 +228,33 @@ def file_load(path, docs_all):
 
     # 想定していたファイル形式の場合のみ読み込む
     if file_extension in ct.SUPPORTED_EXTENSIONS:
-        # CSVファイルの場合、全体を1つのドキュメントとして読み込む
-        if file_extension == ".csv":
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read()  # ファイル全体を文字列として読み込む
-            # ドキュメント形式に変換して追加
-            docs_all.append(LangchainDocument(page_content=content, metadata={"source": path}))
+        # ファイル形式に合ったdata_loaderでファイルを読み込み
+        loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
+        docs = loader.load()
+        # 整形対象のCSVファイルでない場合「docs_all」に追加
+        if not file_name in ct.CSV_INTEGRATION_TARGETS:
+           docs_all.extend(docs)
         else:
-            # 他の形式は通常通り読み込む
-            loader = ct.SUPPORTED_EXTENSIONS[file_extension](path)
-            docs = loader.load()
-            docs_all.extend(docs)
-
+            # ドキュメントに書き込み用のテキストの入れ物を用意
+            doc = ""
+            # リスト「docs」の各要素にはCSVファイルの各行データが入っているため、行データごとに処理
+            for row in docs:
+                # 行データの中身のテキストを取得
+                page_content = row.page_content
+                # 列ごとに改行が入っているため、改行区切りでリスト化
+                value_list = page_content.split("\n")
+                # リストの各要素を改行で連結したテキストを取得
+                row_data = "\n".join(value_list)
+                # 各行データをまとめる入れ物「doc」に、行データを区切り線込みで順次追加
+                doc += row_data + "\n=================================\n"
+            # ドキュメントのオブジェクトを用意
+            new_doc = DocxDocument()
+            # ドキュメントのコンテンツとしてCSVファイルの全データを設定
+            new_doc.page_content = doc
+            # 参照元ファイルのパスを設定
+            new_doc.metadata = {"source": path}
+            # CSVファイル整形後のデータソースを格納する用のリストに追加
+            integrated_docs_all.append(new_doc)
 
 def adjust_string(s):
     """

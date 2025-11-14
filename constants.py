@@ -50,9 +50,12 @@ RAG_TOP_FOLDER_PATH = "./data"
 SUPPORTED_EXTENSIONS = {
     ".pdf": PyMuPDFLoader,
     ".docx": Docx2txtLoader,
-    ".csv": lambda path: None,  # CSVは特別処理するためダミーを設定
-    ".txt": TextLoader
+    ".csv": lambda path: CSVLoader(path, encoding="utf-8"),  # CSVは特別処理するためダミーを設定
+    ".txt": lambda path: TextLoader(path, encoding="utf-8"),  # TXTは特別処理するためダミーを設定
 }
+CSV_INTEGRATION_TARGETS = [
+    "社員名簿.csv",
+]
 WEB_URL_LOAD_TARGETS = [
     "https://generative-ai.web-camp.io/"
 ]
